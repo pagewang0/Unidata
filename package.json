@@ -6,8 +6,7 @@
     "module": "./dist/unidata.es.js",
     "types": "./dist/types/index.d.ts",
     "files": [
-        "src",
-        "dist",
+        "lib",
         "types"
     ],
     "scripts": {
