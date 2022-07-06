@@ -1,7 +1,7 @@
 {
     "compilerOptions": {
         "strict": true,
-        "module": "esnext",
+        "module": "commonjs",
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
         "strictPropertyInitialization": false,
@@ -10,7 +10,7 @@
         "noImplicitAny": true,
         "moduleResolution": "node",
         "sourceMap": false,
-        "outDir": "dist/types",
+        "outDir": "lib",
         "baseUrl": "."
     },
     "include": ["src/**/*", "types/*"]
