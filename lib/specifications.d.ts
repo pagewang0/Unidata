@@ -22,10 +22,18 @@ export declare type Profile = {
         platform: string;
         url?: string;
     }[];
+    attributes?: {
+        display_type?: 'string' | 'number' | 'boolean' | 'date';
+        trait_type?: string;
+        value: null | string | number | boolean;
+    }[];
     source: ProfileSource;
     metadata?: {
         network: Network;
         proof: string;
+        raw?: {
+            [key: string]: any;
+        };
         [key: string]: any;
     };
 };
@@ -56,6 +64,8 @@ export declare type Note = {
     date_updated: string;
     date_published: string;
     related_urls?: string[];
+    content_warning?: string;
+    applications?: string[];
     tags?: string[];
     authors: AccountInstanceURI[];
     title?: string;
@@ -77,11 +87,22 @@ export declare type Note = {
         address?: URI;
         mime_type?: string;
         size_in_bytes?: number;
+        alt?: string;
+        width?: number;
+        height?: number;
+    }[];
+    attributes?: {
+        display_type?: 'string' | 'number' | 'boolean' | 'date';
+        trait_type?: string;
+        value: null | string | number | boolean;
     }[];
     source: NoteSource;
     metadata?: {
         network: Network;
         proof: string;
+        raw?: {
+            [key: string]: any;
+        };
         [key: string]: any;
     };
 };

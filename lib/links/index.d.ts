@@ -9,6 +9,7 @@ export declare type LinksOptions = {
     reversed?: boolean;
     cursor?: any;
     limit?: number;
+    filter?: any;
 };
 export declare type LinkSetOptions = {
     source: string;
