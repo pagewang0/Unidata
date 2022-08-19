@@ -37,11 +37,21 @@ export type Profile = {
         url?: string;
     }[];
 
+    attributes?: {
+        display_type?: 'string' | 'number' | 'boolean' | 'date';
+        trait_type?: string;
+        value: null | string | number | boolean;
+    }[];
+
     source: ProfileSource;
 
     metadata?: {
         network: Network;
         proof: string;
+
+        raw?: {
+            [key: string]: any;
+        };
 
         [key: string]: any;
     };
@@ -88,6 +98,8 @@ export type Note = {
 
     related_urls?: string[];
 
+    content_warning?: string;
+    applications?: string[];
     tags?: string[];
     authors: AccountInstanceURI[];
     title?: string;
@@ -112,6 +124,15 @@ export type Note = {
         address?: URI;
         mime_type?: string;
         size_in_bytes?: number;
+        alt?: string;
+        width?: number;
+        height?: number;
+    }[];
+
+    attributes?: {
+        display_type?: 'string' | 'number' | 'boolean' | 'date';
+        trait_type?: string;
+        value: null | string | number | boolean;
     }[];
 
     source: NoteSource;
@@ -119,6 +140,10 @@ export type Note = {
     metadata?: {
         network: Network;
         proof: string;
+
+        raw?: {
+            [key: string]: any;
+        };
 
         [key: string]: any;
     };

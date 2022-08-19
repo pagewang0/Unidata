@@ -17,7 +17,7 @@ const notes: Notes = await unidata.notes.get(options: {
     platform?: string;
     limit?: number;
     cursor?: any;
-    filters?: any;
+    filter?: any;
 });
 ```
 
@@ -25,7 +25,7 @@ const notes: Notes = await unidata.notes.get(options: {
 -   `platform`: Platfrom of the identity. Ethereum, Solana, Flow, Crossbell, etc. Default to `Ethereum`.
 -   `limit`: The number of assets to return. Since providers use different pagination schemes, there is no guarantee that the quantities are always accurate.
 -   `cursor`: The pagination cursor returned from the previous page's results. Since providers use different pagination schemes, the type is uncertain.
--   `filters`: Varies depending on the source.
+-   `filter`: Varies depending on the source.
 
 ### Set
 
@@ -49,6 +49,7 @@ const result: {
         tags?: string[];
         authors: AccountInstanceURI[];
         title?: string;
+        content_warning?: string;
 
         summary?: {
             content?: string;
@@ -70,6 +71,15 @@ const result: {
             address?: URI;
             mime_type?: string;
             size_in_bytes?: number;
+            alt?: string;
+            width?: number;
+            height?: number;
+        }[];
+
+        attributes?: {
+            display_type?: "string" | "number" | "boolean" | "date";
+            trait_type?: string;
+            value: null | string | number | boolean;
         }[];
     }
 );
@@ -93,9 +103,11 @@ type Notes = {
 
         related_urls?: string[];
 
+        applications?: string[];
         tags?: string[];
         authors: AccountInstanceURI[];
         title?: string;
+        content_warning?: string;
 
         summary?: {
             content?: string;
@@ -117,6 +129,15 @@ type Notes = {
             address?: URI;
             mime_type?: string;
             size_in_bytes?: number;
+            alt?: string;
+            width?: number;
+            height?: number;
+        }[];
+
+        attributes?: {
+            display_type?: 'string' | 'number' | 'boolean' | 'date';
+            trait_type?: string;
+            value: null | string | number | boolean;
         }[];
 
         source: NoteSource;

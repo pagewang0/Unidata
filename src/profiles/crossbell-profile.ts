@@ -1,15 +1,14 @@
 import Main from '../index';
 import Base from './base';
-import { Indexer, Contract, Network } from 'crossbell.js';
+import { Indexer, Contract, Network, ListResponse, CharacterEntity } from 'crossbell.js';
 import { ProfilesOptions, ProfileSetOptions, ProfileInput } from './index';
 import axios from 'axios';
-import { createClient, Client } from '@urql/core';
 import type { Profile } from '../specifications';
+import { unionBy } from 'lodash-es';
 
 class CrossbellProfile extends Base {
     indexer: Indexer;
     contract: Contract;
-    urqlClient: Client;
 
     constructor(main: Main) {
         super(main);
@@ -17,16 +16,9 @@ class CrossbellProfile extends Base {
         Network.setIpfsGateway(this.main.options.ipfsGateway!);
     }
 
-    private async init() {
-        this.urqlClient = createClient({
-            url: 'https://indexer.crossbell.io/v1/graphql',
-            maskTypename: false,
-        });
-    }
-
     async get(options: ProfilesOptions) {
-        if (!this.urqlClient) {
-            this.init();
+        if (!this.indexer) {
+            this.indexer = new Indexer();
         }
 
         options = Object.assign(
@@ -36,94 +28,91 @@ class CrossbellProfile extends Base {
             options,
         );
 
-        const response = await this.urqlClient
-            .query(
-                `
-                query getCharacters($identity: String!, $limit: Int) {
-                    characters( where: { ${
-                        options.platform === 'Ethereum' ? 'owner' : 'handle'
-                    }: { equals: $identity } }, orderBy: [{ createdAt: asc }], ${
-                    options.cursor ? `cursor: { characterId: ${options.cursor}}, ` : ''
-                }take: $limit ) {
-                        handle
-                        characterId
-                        primary
-                        uri
-                        createdAt
-                        updatedAt
-                        metadata {
-                            content
-                        }
-                        transactionHash
-                        blockNumber
-                        updatedTransactionHash
-                        owner
-                    }
-                }`,
-                {
-                    identity: options.identity.toLowerCase(),
-                    limit: options.limit,
-                },
-            )
-            .toPromise();
-
-        let list = [];
-        if (response.data?.characters) {
-            list = await Promise.all(
-                response.data?.characters?.map(async (item: any) => {
-                    if (item.uri && !(item.metadata && item.metadata.content)) {
-                        try {
-                            const res = await axios.get(this.main.utils.replaceIPFS(item.uri));
-                            item.metadata = {
-                                content: res.data,
-                            };
-                        } catch (error) {}
-                    }
-
-                    const profile: Profile = Object.assign(
-                        {
-                            date_created: item.createdAt,
-                            date_updated: item.updatedAt,
-                            username: item.handle,
-                            source: 'Crossbell Profile',
-
-                            metadata: {
-                                network: 'Crossbell',
-                                proof: item.characterId,
-
-                                primary: item.primary,
-                                block_number: item.blockNumber,
-                                owner: item.owner,
-                                transactions: [
-                                    item.transactionHash,
-                                    ...(item.transactionHash !== item.updatedTransactionHash
-                                        ? [item.updatedTransactionHash]
-                                        : []),
-                                ],
-                            },
-                        },
-                        {
-                            ...(item.metadata?.content?.name && { name: item.metadata.content.name }),
-                            ...(item.metadata?.content?.bio && { bio: item.metadata.content.bio }),
-                            ...(item.metadata?.content?.banners && { banners: item.metadata.content.banners }),
-                            ...(item.metadata?.content?.avatars && { avatars: item.metadata.content.avatars }),
-                            ...(item.metadata?.content?.websites && { websites: item.metadata.content.websites }),
-                            ...(item.metadata?.content?.tags && { tags: item.metadata.content.tags }),
-
-                            ...(item.metadata?.content?.connected_accounts && {
-                                connected_accounts: item.metadata.content.connected_accounts,
-                            }),
-                        },
-                    );
-
-                    return profile;
-                }),
-            );
+        let response: ListResponse<CharacterEntity>;
+        if (options.platform === 'Ethereum') {
+            response = await this.indexer.getCharacters(options.identity, {
+                cursor: options.cursor,
+                limit: options.limit,
+            });
+        } else {
+            const character = await this.indexer.getCharacterByHandle(options.identity);
+            if (character) {
+                response = {
+                    count: 1,
+                    cursor: '',
+                    list: [character],
+                };
+            } else {
+                response = {
+                    count: 0,
+                    cursor: '',
+                    list: [],
+                };
+            }
         }
+
+        let list = await Promise.all(
+            response.list?.map(async (item) => {
+                if (item.uri && !(item.metadata && item.metadata.content)) {
+                    try {
+                        const res = await axios.get(this.main.utils.replaceIPFS(item.uri));
+                        (<any>item).metadata = {
+                            content: res.data,
+                        };
+                    } catch (error) {}
+                }
+
+                const profile: Profile = Object.assign(
+                    {
+                        date_created: item.createdAt,
+                        date_updated: item.updatedAt,
+                        username: item.handle,
+                        source: 'Crossbell Profile',
+
+                        metadata: {
+                            network: 'Crossbell',
+                            proof: item.characterId,
+
+                            raw: item.metadata?.content || {},
+                            uri: item.uri,
+
+                            primary: item.primary,
+                            block_number: item.blockNumber,
+                            owner: item.owner,
+                            transactions: [
+                                item.transactionHash,
+                                ...(item.transactionHash !== item.updatedTransactionHash
+                                    ? [item.updatedTransactionHash]
+                                    : []),
+                            ],
+                        },
+                    },
+                    {
+                        ...(item.metadata?.content?.name && { name: item.metadata.content.name }),
+                        ...(item.metadata?.content?.bio && { bio: item.metadata.content.bio }),
+                        ...((<any>item).metadata?.content?.banners && {
+                            banners: (<any>item).metadata.content.banners,
+                        }),
+                        ...(item.metadata?.content?.avatars && { avatars: item.metadata.content.avatars }),
+                        ...(item.metadata?.content?.websites && { websites: item.metadata.content.websites }),
+                        ...((<any>item).metadata?.content?.tags && { tags: (<any>item).metadata.content.tags }),
+
+                        ...(item.metadata?.content?.connected_accounts && {
+                            connected_accounts: item.metadata.content.connected_accounts,
+                        }),
+                        ...((<any>item.metadata?.content)?.attributes && {
+                            attributes: (<any>item.metadata?.content).attributes,
+                        }),
+                    },
+                );
+
+                return profile;
+            }),
+        );
 
         const result = {
             total: list.length,
-            ...(options.limit && list.length >= options.limit && { cursor: list[list.length - 1].metadata.proof }),
+            ...(response.cursor && { cursor: response.cursor }),
 
             list: list.map((profile: Profile) => {
                 // Crossbell specification compatibility
@@ -132,13 +121,14 @@ class CrossbellProfile extends Base {
                         if (typeof account === 'string') {
                             const match = account.match(/:\/\/account:(.*)@(.*)/);
                             if (match) {
-                                account = {
+                                return {
                                     identity: match[1],
                                     platform: match[2],
                                 };
                             } else {
-                                account = {
+                                return {
                                     identity: account,
+                                    platform: '',
                                 };
                             }
                         }
@@ -203,6 +193,14 @@ class CrossbellProfile extends Base {
                     }
 
                     const result = Object.assign({}, character.metadata?.content, input);
+                    if (input.attributes && (<any>character.metadata?.content)?.attributes) {
+                        result.attributes = unionBy(
+                            input.attributes,
+                            (<any>character.metadata?.content).attributes,
+                            'trait_type',
+                        );
+                    }
+
                     const ipfs = await this.main.utils.uploadToIPFS(result, username);
                     await this.contract.setCharacterUri(character.characterId + '', ipfs);
 

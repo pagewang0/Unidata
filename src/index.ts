@@ -3,9 +3,13 @@ import ProfilesC from './profiles';
 import LinksC from './links';
 import AssetsC from './assets';
 import NotesC from './notes';
+
+import type { ProfileInput } from './profiles';
+import type { LinkInput } from './links';
+import type { NoteInput } from './notes';
 import type { Asset, Assets, Note, Notes, Link, Links, Profile, Profiles } from './specifications';
 
-export { Asset, Assets, Note, Notes, Link, Links, Profile, Profiles };
+export { Asset, Assets, Note, Notes, Link, Links, Profile, Profiles, ProfileInput, LinkInput, NoteInput };
 
 console.log(
     `${'\n'} %c Unidata v${SDK_VERSION} %c https://unidata.app ${'\n'}`,

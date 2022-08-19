@@ -3,8 +3,8 @@ import Base from './base';
 import { NotesOptions, NoteSetOptions, NoteInput } from './index';
 import { Indexer, Contract, Network } from 'crossbell.js';
 import { Web3Storage } from 'web3.storage';
-import { BigNumber } from 'ethers';
 import type { Note } from '../specifications';
+import { unionBy } from 'lodash-es';
 
 class CrossbellNote extends Base {
     indexer: Indexer;
@@ -63,7 +63,7 @@ class CrossbellNote extends Base {
                 includeDeleted: false,
                 limit: options.limit,
                 ...(characterId && { characterId: characterId + '' }),
-                ...(options.filter?.url && { toUri: options.filter?.url }),
+                ...(options.filter?.url && { externalUrls: options.filter?.url }),
             });
         }
 
@@ -104,6 +104,8 @@ class CrossbellNote extends Base {
                                     ? [event.updatedTransactionHash]
                                     : []),
                             ],
+
+                            raw: event.metadata?.content,
                         },
                     },
                 );
@@ -132,6 +134,10 @@ class CrossbellNote extends Base {
                             attachment.mime_type = this.main.utils.getMimeType(attachment.address);
                         }
                     });
+                }
+                if ((<any>item).sources) {
+                    item.applications = (<any>item).sources;
+                    delete (<any>item).sources;
                 }
 
                 return item;
@@ -181,14 +187,13 @@ class CrossbellNote extends Base {
         if (input.summary) {
             (<any>input).summary = input.summary.content;
         }
-        let url;
         if (input.related_urls) {
-            if (input.related_urls.length > 1) {
-                throw new Error('Only one related_url is allowed');
-            } else {
-                url = input.related_urls[0];
-                delete input.related_urls;
-            }
+            (<any>input).external_urls = input.related_urls;
+            delete input.related_urls;
+        }
+        if (input.applications) {
+            (<any>input).sources = input.applications;
+            delete input.applications;
         }
 
         switch (options.action) {
@@ -207,12 +212,7 @@ class CrossbellNote extends Base {
                     wrapWithDirectory: false,
                 });
 
-                let data;
-                if (url) {
-                    data = await this.contract.postNoteForAnyUri(characterId + '', `ipfs://${cid}`, url);
-                } else {
-                    data = await this.contract.postNote(characterId + '', `ipfs://${cid}`);
-                }
+                const data = await this.contract.postNote(characterId + '', `ipfs://${cid}`);
 
                 return {
                     code: 0,
@@ -265,6 +265,13 @@ class CrossbellNote extends Base {
                         const id = input.id;
                         delete input.id;
                         const result = Object.assign({}, note.metadata?.content, input);
+                        if (input.attributes && note.metadata?.content?.attributes) {
+                            result.attributes = unionBy(
+                                input.attributes,
+                                note.metadata.content.attributes,
+                                'trait_type',
+                            );
+                        }
                         const ipfs = await this.main.utils.uploadToIPFS(result, id);
                         await this.contract.setNoteUri(characterId + '', id.split('-')[1], ipfs);
 

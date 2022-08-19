@@ -4,8 +4,8 @@ import { registerComponentsPlugin } from '@vuepress/plugin-register-components';
 import path from 'path';
 import { viteBundler } from '@vuepress/bundler-vite';
 import { defineUserConfig } from '@vuepress/cli';
-import viteConfig from '../../vite.config';
 import docsearchPlugin from '@vuepress/plugin-docsearch';
+import { version } from '../../package.json';
 
 export default defineUserConfig({
     title: 'Unidata',
@@ -89,10 +89,10 @@ export default defineUserConfig({
                     link: '/guide/notes/README.md',
                     children: [
                         '/guide/notes/README.md',
-                        '/guide/notes/Mirror-Entry.md',
                         '/guide/notes/Ethereum-NFT-Activity.md',
                         '/guide/notes/Gitcoin-Contribution.md',
                         '/guide/notes/Crossbell-Note.md',
+                        '/guide/notes/Mirror-Entry.md',
                     ],
                 },
                 {
@@ -117,9 +117,17 @@ export default defineUserConfig({
 
     bundler: viteBundler({
         viteOptions: {
-            define: (<any>viteConfig).define,
+            define: {
+                SDK_VERSION: JSON.stringify(version),
+                'global.crypto': {},
+                'global.msCrypto': {},
+                'process.env': {},
+            },
             build: {
-                target: (<any>viteConfig).build.target,
+                target: 'esnext',
+            },
+            ssr: {
+                noExternal: ['lodash-es'],
             },
         },
     }),
